@@ -4,6 +4,9 @@ on:
   push:
     branches:
         - 'main'
+    paths:
+      - 'pgvector/**'
+      - '.github/workflows/pgvector.yml'
 
 env:
   REGION_ID_ACR: cn-hangzhou

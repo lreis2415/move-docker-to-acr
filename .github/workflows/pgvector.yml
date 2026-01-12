@@ -1,0 +1,48 @@
+name: pgvector
+
+on:
+  push:
+    branches:
+        - 'main'
+
+env:
+  REGION_ID_ACR: cn-hangzhou
+  REGISTRY_ACR: registry.cn-hangzhou.aliyuncs.com
+  NAMESPACE_ACR: onesis-geomodels
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to ACR
+        uses: aliyun/acr-login@v1
+        with:
+          login-server: https://registry.cn-hangzhou.aliyuncs.com
+          region-id: cn-hangzhou
+          username: "${{ secrets.ACR_USERNAME }}"
+          password: "${{ secrets.ACR_PASSWORD }}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push pgvector
+        uses: docker/build-push-action@v5
+        with:
+          context: ./pgvector
+          file: ./pgvector/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          tags: |
+            ${{ env.REGISTRY_ACR }}/${{ env.NAMESPACE_ACR }}/pgvector:pg14-trixie
+            ${{ env.REGISTRY_ACR }}/${{ env.NAMESPACE_ACR }}/pgvector:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

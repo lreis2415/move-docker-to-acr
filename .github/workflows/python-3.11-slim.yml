@@ -1,0 +1,69 @@
+name: python-3.11-slim
+
+# Configures this workflow to run every time a change is pushed to the branches.
+on:
+  push:
+    branches:
+        - 'main'
+
+# Defines custom environment variables for the workflow.
+env:
+  ## aliyun ACR
+  REGION_ID_ACR: cn-hangzhou
+  REGISTRY_ACR: registry.cn-hangzhou.aliyuncs.com
+  NAMESPACE_ACR: onesis-geomodels
+
+# There is a single job in this workflow.
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Login to Alibaba Container Registry
+      - name: Login to ACR
+        uses: aliyun/acr-login@v1
+        with:
+          login-server: https://registry.cn-hangzhou.aliyuncs.com
+          region-id: cn-hangzhou
+          username: "${{ secrets.ACR_USERNAME }}"
+          password: "${{ secrets.ACR_PASSWORD }}"
+
+      # Extract metadata (tags, labels) for Docker
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_ACR }}/${{ env.NAMESPACE_ACR }}/python
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      # Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Build and push image
+      - name: Build and push Python 3.11-slim image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./python-3.11-slim
+          file: ./python-3.11-slim/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          tags: |
+            ${{ env.REGISTRY_ACR }}/${{ env.NAMESPACE_ACR }}/python:3.11-slim
+            ${{ env.REGISTRY_ACR }}/${{ env.NAMESPACE_ACR }}/python:3.11
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

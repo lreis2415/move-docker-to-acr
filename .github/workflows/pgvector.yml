@@ -1,6 +1,8 @@
 name: pgvector
 
 on:
+  workflow_dispatch:  # Enable manual trigger
+
   push:
     branches:
         - 'main'
